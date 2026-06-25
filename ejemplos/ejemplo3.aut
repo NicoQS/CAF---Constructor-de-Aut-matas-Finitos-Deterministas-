@@ -1,0 +1,25 @@
+/* 
+   Autómata que modela una puerta automática
+   Estados: cerrada, abriendo, abierta, cerrando
+   Acciones: sensor (detecta persona), timeout (tiempo cumplido)
+*/
+
+AUTOMATA PuertaAutomatica
+
+ALFABETO: "sensor", "timeout"
+
+ESTADOS: cerrada, abriendo, abierta, cerrando
+
+INICIAL: cerrada
+
+FINALES: cerrada
+
+TRANSICIONES:
+    cerrada  -> abriendo con "sensor"
+    abriendo -> abierta  con "timeout"
+    abierta  -> cerrando con "timeout"
+    abierta  -> abierta  con "sensor"
+    cerrando -> abriendo con "sensor"
+    cerrando -> cerrada  con "timeout"
+
+FIN

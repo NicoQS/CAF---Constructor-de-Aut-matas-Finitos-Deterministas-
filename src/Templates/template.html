@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Autómata: {{TITULO}}</title>
+    <style>{{CSS}}</style>
+</head>
+<body>
+    <div class="container">
+        <h1>Autómata Finito Determinista</h1>
+        <div class="subtitle">Nombre: <strong>{{TITULO}}</strong></div>
+        
+        <div class="info-section">
+            <div class="info-item">
+                <span class="label">Estados:</span> { {{ESTADOS}} }
+            </div>
+            <div class="info-item">
+                <span class="label">Alfabeto:</span> { {{ALFABETO}} }
+            </div>
+            <div class="info-item">
+                <span class="label">Estado Inicial:</span> {{ESTADO_INICIAL}}
+            </div>
+            <div class="info-item">
+                <span class="label">Estados Finales:</span> { {{ESTADOS_FINALES}} }
+            </div>
+        </div>
+
+        <div class="controls">
+            <button onclick="resetZoom()">Restablecer Vista</button>
+            <button onclick="zoomIn()">Acercar</button>
+            <button onclick="zoomOut()">Alejar</button>
+        </div>
+
+        <canvas id="canvas" width="1000" height="600"></canvas>
+
+        <div class="legend">
+            <h3>Leyenda:</h3>
+            <div class="legend-item">
+                <div class="legend-icon initial">q0</div>
+                <span>Estado Inicial (círculo verde)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-icon final">qf</div>
+                <span>Estado Final (doble círculo rojo)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-icon">q</div>
+                <span>Estado Regular (círculo simple)</span>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <h3>Tabla de Transiciones</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Estado</th>
+                        {{TABLA_HEADERS}}
+                    </tr>
+                </thead>
+                <tbody>
+                    {{TABLA_FILAS}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Datos del autómata
+        const automataData = {{AUTOMATA_JSON}};
+    </script>
+    <script>{{JS}}</script>
+</body>
+</html>

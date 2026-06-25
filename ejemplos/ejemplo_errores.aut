@@ -1,0 +1,19 @@
+// Ejemplo con errores para probar el manejo de errores mejorado
+
+AUTOMATA EjemploConErrores
+
+// Error 1: Estados duplicados
+ESTADOS: q0, q1, q0, q2
+
+INICIAL: q0
+
+// Error 2: Estado final no declarado
+FINALES: q3
+
+// Error 3: Transiciones con estados no declarados
+TRANSICIONES:
+    q0 -> q5 con '0'  // q5 no fue declarado
+    q1 -> q2 con '1'
+    q0 -> q1 con '0', '0'  // Transición duplicada
+
+FIN

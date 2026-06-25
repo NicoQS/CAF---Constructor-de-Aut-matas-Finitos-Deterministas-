@@ -1,0 +1,10 @@
+// Ejemplo incompleto - faltan secciones obligatorias
+
+AUTOMATA EjemploIncompleto
+
+ESTADOS: q0, q1, q2
+
+// Error: Falta INICIAL
+// Error: Falta TRANSICIONES
+
+FIN
