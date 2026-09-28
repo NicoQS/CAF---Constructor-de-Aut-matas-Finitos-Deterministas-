@@ -52,7 +52,7 @@ REM Paso 1: Generar Scanner y Parser
 echo [1/3] Generando Scanner.cs y Parser.cs con Coco/R...
 REM Copiar gramática temporalmente a la raíz para Coco
 copy grammar\Automata.atg .\Automata_temp.atg
-Coco.exe Automata_temp.atg
+.\Coco.exe Automata_temp.atg
 
 if errorlevel 1 (
     echo ERROR: Fallo al generar el scanner y parser
@@ -84,10 +84,29 @@ move Parser.cs src\
 echo    Archivos movidos a src/
 echo.
 
-REM Paso 3: Compilar con csc.exe
+REM Paso 3: Compilar el proyecto
 echo [3/3] Compilando AutomataCompiler.exe...
-csc /out:out\AutomataCompiler.exe Program.cs src\Scanner.cs src\Parser.cs src\AutomataBuilder.cs src\AutomataVisualizador.cs src\TablaSimbolos.cs
 
+where csc >nul 2>nul
+if %errorlevel% equ 0 (
+    echo    Compilador encontrado: csc.exe
+    csc /nologo /out:out\AutomataCompiler.exe Program.cs src\Scanner.cs src\Parser.cs src\AutomataBuilder.cs src\AutomataVisualizador.cs src\TablaSimbolos.cs
+    goto :check_build
+)
+
+where dotnet >nul 2>nul
+if %errorlevel% equ 0 (
+    echo    csc.exe no esta en el PATH, usando dotnet build...
+    dotnet build AutomataCompiler.csproj -c Release -o out --nologo -v quiet
+    goto :check_build
+)
+
+echo ERROR: No se encontro csc.exe ni dotnet en el PATH.
+echo Instala el SDK de .NET ^(https://dotnet.microsoft.com/download^) o agrega csc.exe al PATH.
+pause
+exit /b 1
+
+:check_build
 if errorlevel 1 (
     echo ERROR: Fallo la compilacion
     pause

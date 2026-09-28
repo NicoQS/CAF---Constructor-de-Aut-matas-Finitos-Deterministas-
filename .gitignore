@@ -1,0 +1,14 @@
+# Compilacion
+bin/
+obj/
+out/
+
+# Archivo temporal generado por build.bat al invocar Coco/R
+Automata_temp.atg
+
+# Editor / IDE
+.vs/
+*.user
+
+# Cache de herramientas locales
+.atl/

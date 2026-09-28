@@ -69,37 +69,70 @@ function dibujar() {
     ctx.scale(scale, scale);
     ctx.translate(offsetX, offsetY);
 
-    // Agrupar transiciones para manejar múltiples transiciones entre los mismos estados
-    const transicionesAgrupadas = {};
-    
-    for (const [key, trans] of Object.entries(transiciones)) {
+    // Paso 1: combinar los simbolos de una misma transicion dirigida (origen -> destino)
+    // Ej: "q2 -> q2 con 0, 1" son dos entradas en el JSON pero una sola flecha con etiqueta "0, 1"
+    const dirigidas = {};
+    for (const [key, destino] of Object.entries(transiciones)) {
         const [origen, simbolo] = key.split('|');
-        const destino = trans;
-        const clavePar = origen < destino ? `${origen}-${destino}` : `${destino}-${origen}`;
-        const direccion = origen < destino ? 'normal' : 'reversa';
-        
-        if (!transicionesAgrupadas[clavePar]) {
-            transicionesAgrupadas[clavePar] = [];
+        const claveDirigida = `${origen}>>>${destino}`;
+        if (!dirigidas[claveDirigida]) {
+            dirigidas[claveDirigida] = { origen, destino, simbolos: [] };
         }
-        
-        transicionesAgrupadas[clavePar].push({
-            origen: origen,
-            destino: destino,
-            simbolo: simbolo,
-            direccion: direccion
-        });
+        dirigidas[claveDirigida].simbolos.push(simbolo);
     }
 
-    // Dibujar transiciones agrupadas
-    for (const [clavePar, grupo] of Object.entries(transicionesAgrupadas)) {
-        if (grupo.length === 1 && grupo[0].origen === grupo[0].destino) {
-            // Auto-transición (bucle)
-            const pos = estados[grupo[0].origen];
-            dibujarAutoTransicion(pos.x, pos.y, grupo[0].simbolo);
+    // Paso 2: separar auto-transiciones (bucles) de transiciones entre estados distintos.
+    // Los bucles se dibujan aparte para no depender de la distancia entre dos puntos iguales.
+    const bucles = [];
+    const paresDeEstados = {};
+    for (const info of Object.values(dirigidas)) {
+        const etiqueta = info.simbolos.join(', ');
+        if (info.origen === info.destino) {
+            bucles.push({ estado: info.origen, etiqueta });
         } else {
-            // Transiciones entre diferentes estados
-            dibujarGrupoTransiciones(grupo);
+            const clavePar = info.origen < info.destino
+                ? `${info.origen}-${info.destino}`
+                : `${info.destino}-${info.origen}`;
+            if (!paresDeEstados[clavePar]) {
+                paresDeEstados[clavePar] = [];
+            }
+            paresDeEstados[clavePar].push({ origen: info.origen, destino: info.destino, etiqueta });
         }
+    }
+
+    // Paso 3: dibujar transiciones entre estados distintos.
+    // Si hay ida y vuelta entre el mismo par, se curvan hacia lados opuestos para que no se tapen.
+    for (const grupo of Object.values(paresDeEstados)) {
+        if (grupo.length === 1) {
+            const t = grupo[0];
+            const posOrigen = estados[t.origen];
+            const posDestino = estados[t.destino];
+            dibujarFlecha(posOrigen.x, posOrigen.y, posDestino.x, posDestino.y, t.etiqueta);
+        } else {
+            // Offset perpendicular calculado UNA sola vez con una dirección de referencia fija
+            // (la del primer elemento del grupo). Si se calculara por transición, la ida y la
+            // vuelta tienen ángulos opuestos y el offset alternado se cancela, volviendo a
+            // superponer ambas curvas en el mismo punto de control.
+            const posRefOrigen = estados[grupo[0].origen];
+            const posRefDestino = estados[grupo[0].destino];
+            const anguloBase = Math.atan2(posRefDestino.y - posRefOrigen.y, posRefDestino.x - posRefOrigen.x);
+            const anguloPerpendicular = anguloBase + Math.PI / 2;
+            const offsetX = Math.cos(anguloPerpendicular) * 24;
+            const offsetY = Math.sin(anguloPerpendicular) * 24;
+
+            grupo.forEach((t, i) => {
+                const posOrigen = estados[t.origen];
+                const posDestino = estados[t.destino];
+                const signo = i === 0 ? 1 : -1;
+                dibujarFlechaCurva(posOrigen.x, posOrigen.y, posDestino.x, posDestino.y, t.etiqueta, offsetX * signo, offsetY * signo);
+            });
+        }
+    }
+
+    // Paso 4: dibujar los bucles (auto-transiciones), uno por estado, con todos sus simbolos combinados
+    for (const bucle of bucles) {
+        const pos = estados[bucle.estado];
+        dibujarAutoTransicion(pos.x, pos.y, bucle.etiqueta);
     }
 
     // Dibujar estados
@@ -112,33 +145,72 @@ function dibujar() {
     ctx.restore();
 }
 
-function dibujarGrupoTransiciones(grupo) {
-    if (grupo.length === 1) {
-        // Una sola transición
-        const t = grupo[0];
-        const posOrigen = estados[t.origen];
-        const posDestino = estados[t.destino];
-        dibujarFlecha(posOrigen.x, posOrigen.y, posDestino.x, posDestino.y, t.simbolo);
-    } else {
-        // Múltiples transiciones - agrupar etiquetas por dirección
-        const porDireccion = {};
-        for (const t of grupo) {
-            const clave = `${t.origen}-${t.destino}`;
-            if (!porDireccion[clave]) {
-                porDireccion[clave] = [];
-            }
-            porDireccion[clave].push(t.simbolo);
-        }
-        
-        // Dibujar una flecha por dirección con múltiples etiquetas
-        for (const [clave, simbolos] of Object.entries(porDireccion)) {
-            const [origen, destino] = clave.split('-');
-            const posOrigen = estados[origen];
-            const posDestino = estados[destino];
-            const etiquetaCombinada = simbolos.join(', ');
-            dibujarFlecha(posOrigen.x, posOrigen.y, posDestino.x, posDestino.y, etiquetaCombinada);
-        }
-    }
+function dibujarFlechaCurva(x1, y1, x2, y2, etiqueta, offsetX, offsetY) {
+    const radio = 35;
+    const distancia = Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
+
+    // Evitar dibujar si los estados están muy cerca
+    if (distancia < radio * 2.5) return;
+
+    // El offset se recibe ya calculado por el llamador con una dirección de referencia fija
+    // para todo el par de estados (ver dibujar()). No se recalcula acá a partir de x1,y1,x2,y2
+    // porque esos varían según la dirección de CADA transición, y eso haría que ida y vuelta
+    // terminen con el mismo punto de control (superpuestas otra vez).
+    const xControl = (x1 + x2) / 2 + offsetX;
+    const yControl = (y1 + y2) / 2 + offsetY;
+
+    // Ángulos hacia/desde el punto de control, para que la línea nazca y termine
+    // en el borde del círculo apuntando en la dirección real de la curva
+    const anguloInicio = Math.atan2(yControl - y1, xControl - x1);
+    const anguloFin = Math.atan2(y2 - yControl, x2 - xControl);
+    const margen = 5;
+
+    const xOrigen = x1 + Math.cos(anguloInicio) * (radio + margen);
+    const yOrigen = y1 + Math.sin(anguloInicio) * (radio + margen);
+    const xDestino = x2 - Math.cos(anguloFin) * (radio + margen);
+    const yDestino = y2 - Math.sin(anguloFin) * (radio + margen);
+
+    // Curva
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(xOrigen, yOrigen);
+    ctx.quadraticCurveTo(xControl, yControl, xDestino, yDestino);
+    ctx.stroke();
+
+    // Punta de flecha, tangente a la curva en el punto final
+    const anguloFlecha = 0.4;
+    const longitudFlecha = 12;
+    ctx.fillStyle = '#333';
+    ctx.beginPath();
+    ctx.moveTo(xDestino, yDestino);
+    ctx.lineTo(
+        xDestino - longitudFlecha * Math.cos(anguloFin - anguloFlecha),
+        yDestino - longitudFlecha * Math.sin(anguloFin - anguloFlecha)
+    );
+    ctx.lineTo(
+        xDestino - longitudFlecha * Math.cos(anguloFin + anguloFlecha),
+        yDestino - longitudFlecha * Math.sin(anguloFin + anguloFlecha)
+    );
+    ctx.closePath();
+    ctx.fill();
+
+    // Etiqueta en el punto de control (donde la curva se separa de la línea recta)
+    ctx.font = 'bold 14px Arial';
+    const medidaTexto = ctx.measureText(etiqueta);
+    const anchoFondo = Math.max(medidaTexto.width + 8, 20);
+    const altoFondo = 20;
+
+    ctx.fillStyle = 'white';
+    ctx.strokeStyle = '#ddd';
+    ctx.lineWidth = 1;
+    ctx.fillRect(xControl - anchoFondo / 2, yControl - altoFondo / 2, anchoFondo, altoFondo);
+    ctx.strokeRect(xControl - anchoFondo / 2, yControl - altoFondo / 2, anchoFondo, altoFondo);
+
+    ctx.fillStyle = '#667eea';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(etiqueta, xControl, yControl);
 }
 
 function dibujarEstado(x, y, nombre, esInicial, esFinal) {
