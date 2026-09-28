@@ -8,11 +8,19 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>disable</Nullable>
     <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- Lista explicita en vez del glob por defecto del SDK: garantiza que dotnet build
+         compile exactamente los mismos archivos que csc en build.bat, sin depender de que
+         no haya .cs sueltos en el repo. -->
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="out/**" />
-    <Compile Remove="htmls_generados/**" />
+    <Compile Include="Program.cs" />
+    <Compile Include="src/Scanner.cs" />
+    <Compile Include="src/Parser.cs" />
+    <Compile Include="src/AutomataBuilder.cs" />
+    <Compile Include="src/AutomataVisualizador.cs" />
+    <Compile Include="src/TablaSimbolos.cs" />
   </ItemGroup>
 
 </Project>
